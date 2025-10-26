@@ -36,5 +36,6 @@ func createResourceMap() map[string]*schema.Resource {
 		"proxmox_virtual_environment_time":                            resource.Time(),
 		"proxmox_virtual_environment_user":                            resource.User(),
 		"proxmox_virtual_environment_vm":                              vm.VM(),
+		"proxmox_virtual_environment_pool_membership":                 pool.Membership(),
 	}
 }
