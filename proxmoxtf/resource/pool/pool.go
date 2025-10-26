@@ -99,6 +99,12 @@ func Pool() *schema.Resource {
 				return []*schema.ResourceData{d}, nil
 			},
 		},
+		CustomizeDiff: func(ctx context.Context, d *schema.ResourceDiff, m interface{}) error {
+			if d.HasChange(mkResourceVirtualEnvironmentPoolMembers) {
+				return d.Clear(mkResourceVirtualEnvironmentPoolMembers)
+			}
+			return nil
+		},
 	}
 }
 
