@@ -16,6 +16,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bpg/terraform-provider-proxmox/proxmox/pools"
+	"github.com/google/go-cmp/cmp"
+
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
@@ -889,7 +892,7 @@ func Container() *schema.Resource {
 				Type:        schema.TypeString,
 				Description: "The ID of the pool to assign the container to",
 				Optional:    true,
-				ForceNew:    true,
+				ForceNew:    false,
 				Default:     dvPoolID,
 			},
 			mkProtection: {
@@ -2899,6 +2902,17 @@ func containerUpdate(ctx context.Context, d *schema.ResourceData, m interface{})
 		return diag.FromErr(e)
 	}
 
+	if oldPoolValue, newPoolValue := d.GetChange(mkPoolID); !cmp.Equal(oldPoolValue, newPoolValue) {
+		e = containerUpdatePool(ctx, client.Pool(), oldPoolValue.(string), newPoolValue.(string), vmID)
+		if e != nil {
+			return diag.FromErr(e)
+		}
+
+		if !d.HasChangeExcept(mkPoolID) {
+			return containerRead(ctx, d, m)
+		}
+	}
+
 	containerAPI := client.Node(nodeName).Container(vmID)
 
 	// Prepare the new request object.
@@ -3520,6 +3534,36 @@ func containerDelete(ctx context.Context, d *schema.ResourceData, m interface{})
 	}
 
 	d.SetId("")
+
+	return nil
+}
+
+func containerUpdatePool(ctx context.Context, api *pools.Client, oldPoolId, newPoolId string, cId int) error {
+	vmList := (types.CustomCommaSeparatedList)([]string{strconv.Itoa(cId)})
+
+	if newPoolId != "" {
+		trueValue := types.CustomBool(true)
+		poolUpdate := &pools.PoolUpdateRequestBody{
+			VMs:       &vmList,
+			AllowMove: &trueValue,
+		}
+
+		err := api.UpdatePool(ctx, newPoolId, poolUpdate)
+		if err != nil {
+			return fmt.Errorf("while adding CT %d to pool %s: %w", cId, newPoolId, err)
+		}
+	} else if oldPoolId != "" {
+		trueValue := types.CustomBool(true)
+		poolUpdate := &pools.PoolUpdateRequestBody{
+			VMs:    &vmList,
+			Delete: &trueValue,
+		}
+
+		err := api.UpdatePool(ctx, oldPoolId, poolUpdate)
+		if err != nil {
+			return fmt.Errorf("while removing CTVM %d from pool %s: %w", cId, oldPoolId, err)
+		}
+	}
 
 	return nil
 }
