@@ -542,6 +542,7 @@ func (p *proxmoxProvider) Resources(_ context.Context) []func() resource.Resourc
 		sdnsubnet.NewResource,
 		sdnapplier.NewResource,
 		pools.NewPoolMembershipResource,
+		pools.NewPoolResource,
 	}
 }
 

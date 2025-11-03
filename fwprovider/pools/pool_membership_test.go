@@ -578,7 +578,7 @@ func testAccCheckPoolContainMember(t *testing.T, te *test.Environment, poolName,
 
 		exists, poolCheckErr := checkPoolContainsMember(
 			ctx,
-			te.PoolsClient(),
+			ptr.Ptr(pools.Client{Client: te.Client()}),
 			poolName,
 			memberID,
 			memberType,
